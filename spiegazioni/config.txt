@@ -1,0 +1,13 @@
+ .env è solo un file di testo — Python non lo legge automaticamente. Serve un componente che:
+
+  1. Carica le variabili da .env
+  2. Valida che siano presenti e del tipo giusto (es. ACCESS_TOKEN_EXPIRE_MINUTES deve essere un intero, non una
+  stringa)
+  3. Espone una singola istanza settings usabile ovunque nell'app
+
+  Questo è il ruolo di config.py. Usa pydantic-settings: definisci una classe con i campi attesi, Pydantic legge .env e
+  popola automaticamente i campi. Se una variabile manca o ha tipo sbagliato, l'app crasha all'avvio — meglio scoprirlo
+  subito che a runtime durante una richiesta.
+
+  Il pattern usato si chiama Singleton: settings è un'unica istanza creata una volta sola. Tutti i moduli che fanno from
+   config import settings ottengono lo stesso oggetto — non si rilegge .env ogni volta.

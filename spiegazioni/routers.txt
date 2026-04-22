@@ -1,0 +1,47 @@
+ I router sono i file che definiscono gli endpoint HTTP — cosa risponde l'API ad ogni URL.
+  Ogni router gestisce un gruppo di endpoint con un prefisso comune e viene registrato in main.py
+  tramite include_router.
+
+  ---
+  routers/auth.py — prefisso /auth
+
+  Espone un solo endpoint: POST /auth/login.
+
+  Il flusso è:
+    1. Riceve username e password (schema LoginRequest)
+    2. Cerca l'utente nel DB per username
+    3. Verifica la password con bcrypt (pwd_context.verify confronta la stringa con l'hash salvato)
+    4. Se le credenziali sono corrette, chiama create_access_token con username e ruolo
+    5. Restituisce il token (schema TokenResponse)
+
+  Se l'utente non esiste o la password è sbagliata, risponde sempre con lo stesso messaggio generico
+  (401) — non si specifica quale dei due è errato, per non dare informazioni a chi tenta un attacco.
+
+  ---
+  routers/production.py — prefisso /production
+
+  Espone cinque endpoint GET, tutti protetti da get_current_user (user + admin):
+
+    GET /production/top-hours        → ore con produzione energetica più alta (param: limit)
+    GET /production/top-radiation    → ore con irradiazione più alta (param: limit)
+    GET /production/monthly-aggregate→ produzione totale e media irradiazione per anno/mese
+    GET /production/averages         → medie per ora del giorno + aggregato mensile
+    GET /production/suggestions      → batch: restituisce tutto insieme in una sola chiamata
+
+  Ogni endpoint delega immediatamente al ProductionService — i router non contengono logica
+  di business, solo il "collegamento" tra HTTP e service layer.
+
+  ---
+  routers/admin.py — prefisso /admin
+
+  Espone un solo endpoint: POST /admin/upload-csv, protetto da require_admin.
+
+  Il flusso è:
+    1. Riceve un file via multipart form (UploadFile)
+    2. Verifica che il filename termini con .csv
+    3. Legge il contenuto binario del file
+    4. Passa il contenuto a CsvImporter.import_csv
+    5. Restituisce il numero di righe importate
+
+  Se il CSV è malformato o mancano colonne obbligatorie, CsvImporter solleva ValueError
+  che il router cattura e converte in 422 Unprocessable Entity.

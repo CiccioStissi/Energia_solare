@@ -1,0 +1,25 @@
+ Le applicazioni hanno bisogno di configurazioni che cambiano tra ambienti (sviluppo, produzione) o che sono sensibili
+  (password, chiavi segrete). Metterle direttamente nel codice è un errore grave — chiunque legga il codice vede le
+  credenziali.
+
+  .env è un file di testo che vive fuori dal codice e contiene queste variabili. Regola fondamentale: .env va aggiunto a
+   .gitignore — non deve mai finire su GitHub.
+
+  Le variabili che ci servono:
+
+  ┌─────────────────────────────┬─────────────────────────────────────────────────────────────┐
+  │          Variabile          │                            Scopo                            │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────┤
+  │ DATABASE_URL                │ stringa di connessione a PostgreSQL                         │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────┤
+  │ SECRET_KEY                  │ chiave con cui firmiamo i JWT — deve essere lunga e casuale │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────┤
+  │ ALGORITHM                   │ algoritmo di firma JWT (useremo HS256)                      │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────┤
+  │ ACCESS_TOKEN_EXPIRE_MINUTES │ dopo quanti minuti il token scade                           │
+  ├─────────────────────────────┼─────────────────────────────────────────────────────────────┤
+  │ FIRST_ADMIN_PASSWORD        │ password dell'admin creato al primo avvio                   │
+  └─────────────────────────────┴─────────────────────────────────────────────────────────────┘
+
+  config.py leggerà queste variabili tramite pydantic-settings e le esporrà al resto dell'app in modo tipizzato. .env da
+   solo non fa nulla — è solo un file di testo. È config.py che lo legge.

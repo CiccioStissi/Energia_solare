@@ -1,0 +1,84 @@
+ energia-solare/
+  ├── server/
+  │   ├── main.py
+  │   ├── config.py
+  │   ├── database.py
+  │   │
+  │   ├── models/
+  │   │   ├── production.py        # tabella produzione solare
+  │   │   └── user.py              # tabella users (username, hashed_pw, role)
+  │   │
+  │   ├── schemas/
+  │   │   ├── production.py        # DTO dati energia
+  │   │   ├── auth.py              # DTO login request + token response
+  │   │   └── user.py              # DTO user info
+  │   │
+  │   ├── routers/
+  │   │   ├── auth.py              # POST /auth/login
+  │   │   ├── production.py        # GET endpoints analisi dati
+  │   │   └── admin.py             # POST /admin/upload-csv
+  │   │
+  │   ├── services/
+  │   │   ├── production.py        # aggregazioni, medie, filtri
+  │   │   └── csv_importer.py      # parsing + bulk insert PostgreSQL
+  │   │
+  │   └── auth/
+  │       ├── jwt.py               # genera/verifica token
+  │       └── dependencies.py      # get_current_user, require_admin
+  │
+  ├── client/
+  │   └── cli.py
+  │
+  ├── data/
+  │   └── solar_production.csv
+  │
+  ├── .env
+  └── requirements.txt
+
+  ---
+  API completa:
+
+  # Auth
+  POST /auth/login                  → JWT (role: user | admin)
+
+  # Produzione — accessibili a tutti (user + admin)
+  GET  /production/top-hours        → ore/giorni alta produzione
+  GET  /production/top-radiation    → ore/giorni alta irradiazione
+  GET  /production/monthly-aggregate→ produzione aggregata per mese
+  GET  /production/averages         → medie per ora/giorno/mese
+  GET  /production/suggestions      → Request Batch (tutto insieme)
+
+  # Admin only
+  POST /admin/upload-csv            → upload CSV → import PostgreSQL
+
+  ---
+  Ruoli JWT:
+
+  token payload: { "sub": "username", "role": "user"|"admin" }
+
+  dependencies.py:
+    get_current_user  → verifica JWT valido (user + admin)
+    require_admin     → verifica JWT + role == "admin"
+
+  require_admin si applica solo su /admin/upload-csv.
+  Tutti gli endpoint GET usano get_current_user.
+
+  ---
+  Flusso CLI:
+
+  $ python cli.py login --user mario --password secret
+    → salva JWT in ~/.energia_token
+
+  $ python cli.py top-hours
+  $ python cli.py averages
+  $ python cli.py suggestions
+  $ python cli.py upload-csv data/solar.csv   # solo se admin
+
+  ---
+  Tutto chiaro? Possiamo iniziare a creare i file, vuoi partire da:
+
+  1. Setup base (main.py, config.py, database.py, .env, requirements.txt)
+  2. Models + DB (user.py, production.py)
+  3. Auth (JWT, login, ruoli)
+
+  Suggerisco ordine 1 → 2 → 3 → services → routers → CLI. Confermi?

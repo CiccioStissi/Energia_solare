@@ -1,0 +1,39 @@
+ La cartella auth/ gestisce tutto ciò che riguarda l'identità dell'utente: creare token, verificarli,
+  e proteggere gli endpoint. È separata dai router perché la logica di autenticazione è trasversale —
+  viene usata da più router contemporaneamente.
+
+  ---
+  jwt.py
+
+  Contiene due funzioni che si occupano della vita del token JWT:
+
+    - create_access_token(data): riceve un dizionario (es. {"sub": "admin", "role": "admin"}),
+      aggiunge il campo "exp" con la scadenza calcolata da settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+      e firma il tutto con SECRET_KEY usando l'algoritmo HS256. Restituisce una stringa opaca
+      che il client dovrà allegare ad ogni richiesta.
+
+    - decode_token(token): fa l'operazione inversa — verifica la firma e restituisce il payload.
+      Se il token è scaduto o la firma non corrisponde, jose solleva JWTError.
+
+  Il token JWT non è cifrato, solo firmato: chiunque può leggere il payload (base64), ma non può
+  modificarlo senza invalidare la firma. Per questo il payload contiene solo dati non sensibili
+  (username e ruolo), mai la password.
+
+  ---
+  dependencies.py
+
+  Contiene due dependency di FastAPI usate per proteggere gli endpoint:
+
+    - get_current_user: viene iniettata da FastAPI ogni volta che un endpoint la dichiara come parametro.
+      Estrae il Bearer token dall'header Authorization, chiama decode_token per verificarlo,
+      ricava lo username dal campo "sub" e lo cerca nel database. Se qualcosa va storto
+      (token mancante, scaduto, utente non trovato) risponde con 401 Unauthorized.
+      Se tutto va bene, restituisce l'oggetto User — l'endpoint lo riceve già validato.
+
+    - require_admin: costruita sopra get_current_user con un controllo in più — verifica che
+      user.role sia "admin". Se non lo è, risponde con 403 Forbidden. Viene usata solo
+      sull'endpoint /admin/upload-csv.
+
+  Il pattern Depends di FastAPI permette di comporre queste dipendenze: require_admin dipende da
+  get_current_user, che a sua volta dipende da get_db. FastAPI risolve la catena automaticamente
+  ad ogni richiesta.

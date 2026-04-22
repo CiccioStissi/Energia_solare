@@ -1,0 +1,26 @@
+ main.py è il punto di ingresso dell'applicazione. Fa tre cose: definisce il ciclo di vita dell'app (lifespan), crea l'istanza FastAPI, e registra i router.
+
+  1. Lifespan
+  FastAPI permette di eseguire codice all'avvio e allo spegnimento dell'app tramite un context manager asincrono.
+  Nel lifespan di questo progetto succedono due cose in sequenza:
+
+    - Creazione tabelle: viene chiamato Base.metadata.create_all — SQLAlchemy legge tutti i modelli registrati
+      (User, SolarProduction) e crea le tabelle nel database se non esistono già. È un'operazione idempotente:
+      se le tabelle ci sono, non fa nulla.
+
+    - Creazione admin: viene cercato un utente con username "admin". Se non esiste, viene creato con la password
+      letta da settings.FIRST_ADMIN_PASSWORD (presa da .env) e il ruolo "admin". Questo evita di dover
+      inserire manualmente il primo utente ogni volta che si avvia l'app su un DB vuoto.
+
+  2. Istanza FastAPI
+  app = FastAPI(...) crea l'applicazione con titolo, descrizione e versione — questi metadati appaiono
+  automaticamente nella documentazione Swagger su /docs.
+
+  3. Router
+  include_router registra i tre gruppi di endpoint:
+    - auth.router    → prefisso /auth
+    - production.router → prefisso /production
+    - admin.router   → prefisso /admin
+
+  Separare i router in file distinti è una best practice: ogni file gestisce una responsabilità specifica
+  e main.py resta pulito — si limita a "collegare" i pezzi.

@@ -1,0 +1,46 @@
+ I modelli sono la rappresentazione Python delle tabelle del database. SQLAlchemy li usa per sapere
+  come creare le tabelle e come mappare le righe in oggetti Python.
+
+  Entrambi i modelli ereditano da Base (definita in database.py). Questa ereditarietà "registra" il modello
+  in Base.metadata — che è il registro globale di tutte le tabelle. Quando main.py chiama
+  Base.metadata.create_all, SQLAlchemy sa esattamente quali tabelle creare perché le ha tutte in quel registro.
+
+  ---
+  user.py — tabella "users"
+
+  Contiene gli utenti dell'applicazione:
+
+  ┌─────────────────┬────────────────────────────────────────────────────────────────┐
+  │     Colonna     │                           Scopo                                │
+  ├─────────────────┼────────────────────────────────────────────────────────────────┤
+  │ id              │ chiave primaria auto-incrementale                              │
+  ├─────────────────┼────────────────────────────────────────────────────────────────┤
+  │ username        │ unico e indicizzato — serve per cercare l'utente al login      │
+  ├─────────────────┼────────────────────────────────────────────────────────────────┤
+  │ hashed_password │ la password NON viene salvata in chiaro — solo l'hash bcrypt   │
+  ├─────────────────┼────────────────────────────────────────────────────────────────┤
+  │ role            │ "user" o "admin" — determina i permessi sull'API               │
+  └─────────────────┴────────────────────────────────────────────────────────────────┘
+
+  ---
+  production.py — tabella "solar_production"
+
+  Contiene i dati di produzione fotovoltaica, una riga per ogni misurazione oraria:
+
+  ┌────────────────┬─────────────────────────────────────────────────────────────────┐
+  │    Colonna     │                           Scopo                                 │
+  ├────────────────┼─────────────────────────────────────────────────────────────────┤
+  │ id             │ chiave primaria auto-incrementale                               │
+  ├────────────────┼─────────────────────────────────────────────────────────────────┤
+  │ timestamp      │ data e ora della misurazione — unico (no duplicati) e indicizzato│
+  ├────────────────┼─────────────────────────────────────────────────────────────────┤
+  │ energy_kwh     │ energia prodotta nell'ora — obbligatorio                        │
+  ├────────────────┼─────────────────────────────────────────────────────────────────┤
+  │ radiation_wm2  │ irradiazione solare in W/m² — opzionale (nullable)             │
+  ├────────────────┼─────────────────────────────────────────────────────────────────┤
+  │ temperature_c  │ temperatura in °C — opzionale (nullable)                        │
+  └────────────────┴─────────────────────────────────────────────────────────────────┘
+
+  timestamp è dichiarato unique: se si tenta di inserire due misurazioni per lo stesso istante,
+  il database rifiuta l'inserimento. Il csv_importer sfrutta questo vincolo con ON CONFLICT DO NOTHING
+  per rendere le importazioni idempotenti — importare lo stesso CSV due volte non crea duplicati.

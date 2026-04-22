@@ -1,0 +1,38 @@
+ Gli schemi sono classi Pydantic che definiscono la forma dei dati in entrata e in uscita dall'API.
+  Mentre i modelli (models/) descrivono le tabelle del database, gli schemi descrivono cosa l'API
+  accetta nelle richieste e cosa restituisce nelle risposte.
+
+  Pydantic valida automaticamente i dati: se un campo obbligatorio manca, o il tipo è sbagliato,
+  FastAPI risponde con un errore 422 prima ancora che il codice dell'endpoint venga eseguito.
+
+  ---
+  auth.py
+
+  Contiene due schemi usati nell'endpoint di login:
+
+    - LoginRequest: i dati che il client manda (username e password come stringhe)
+    - TokenResponse: la risposta del server (access_token JWT + token_type="bearer")
+
+  ---
+  user.py
+
+  Contiene UserInfo: rappresenta un utente come viene esposto all'esterno (id, username, role).
+  Nota: hashed_password NON è incluso — non deve mai uscire dall'API.
+  model_config = {"from_attributes": True} permette a Pydantic di costruire lo schema direttamente
+  da un oggetto SQLAlchemy (User), senza dover copiare i campi a mano.
+
+  ---
+  production.py
+
+  Contiene tutti gli schemi per i dati solari:
+
+    - ProductionRecord: un record completo della tabella (usato internamente)
+    - TopEntry: una riga dei risultati top-hours / top-radiation (timestamp, energia, irradiazione)
+    - HourlyStats: media oraria (ora del giorno, media energia, totale energia)
+    - MonthlyAggregate: aggregato mensile (anno, mese, totale energia, media irradiazione)
+    - AveragesResponse: raggruppa la lista HourlyStats e la lista MonthlyAggregate
+    - SuggestionsResponse: batch completo — contiene top_hours, top_radiation, monthly_aggregate, averages
+
+  La gerarchia degli schemi rispecchia la gerarchia delle risposte: suggestions contiene averages,
+  che contiene hourly e monthly. Questo permette a FastAPI di validare e documentare automaticamente
+  anche le risposte annidate.

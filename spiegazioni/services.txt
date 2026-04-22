@@ -1,0 +1,50 @@
+ I service sono il layer che contiene la logica di business dell'applicazione. I router ricevono
+  la richiesta HTTP e la passano al service; il service esegue le operazioni sul database e
+  restituisce i dati. Questa separazione rende il codice più facile da testare e modificare:
+  cambiare una query non tocca il router, e viceversa.
+
+  ---
+  services/production.py — classe ProductionService
+
+  Contiene cinque metodi statici, ognuno con una query SQL diversa costruita tramite SQLAlchemy:
+
+    - top_hours(db, limit): seleziona i record ordinati per energy_kwh decrescente.
+      Restituisce i "limit" momenti in cui il pannello ha prodotto di più.
+
+    - top_radiation(db, limit): seleziona i record con radiation_wm2 non nullo, ordinati
+      per irradiazione decrescente. Filtra i null perché non tutti i record hanno questo dato.
+
+    - monthly_aggregate(db): usa extract("year") e extract("month") per raggruppare i dati per
+      anno e mese. Calcola la somma totale dell'energia (func.sum) e la media dell'irradiazione
+      (func.avg) per ogni mese. Utile per vedere l'andamento stagionale della produzione.
+
+    - averages(db): calcola le medie per ora del giorno (extract("hour")) — mostra in quali ore
+      il pannello produce di più mediamente. Poi chiama monthly_aggregate per avere anche
+      il dato mensile. Restituisce entrambi raggruppati in un dizionario.
+
+    - suggestions(db): è un metodo "batch" — chiama gli altri quattro metodi e raccoglie
+      tutto in un'unica risposta. Permette al client di fare una sola richiesta HTTP invece
+      di quattro chiamate separate.
+
+  ---
+  services/csv_importer.py — classe CsvImporter
+
+  Si occupa di leggere un file CSV e importarne i dati nella tabella solar_production.
+
+  Il problema principale è che i CSV possono arrivare con nomi di colonne diversi: "timestamp",
+  "datetime", "data", "time" sono tutti nomi validi per la stessa colonna. CsvImporter gestisce
+  questo con un dizionario di alias (_COL_MAP): per ogni colonna target definisce una lista di
+  nomi accettati e rinomina automaticamente le colonne trovate nel CSV.
+
+  Il flusso di import_csv è:
+    1. Legge il CSV con pandas da bytes (io.BytesIO)
+    2. Normalizza i nomi colonne (lowercase, underscore)
+    3. Rinomina usando gli alias → colonne standard
+    4. Verifica che "timestamp" e "energy_kwh" siano presenti (obbligatori)
+    5. Converte i tipi: timestamp → datetime, numeri → float
+    6. Elimina le righe con timestamp o energy_kwh nulli
+    7. Esegue un INSERT bulk con la sintassi PostgreSQL ON CONFLICT DO NOTHING
+
+  ON CONFLICT DO NOTHING è la chiave: se un timestamp è già presente nel DB (vincolo unique),
+  la riga viene saltata silenziosamente invece di causare un errore. Importare lo stesso CSV
+  due volte produce lo stesso risultato della prima importazione — operazione idempotente.

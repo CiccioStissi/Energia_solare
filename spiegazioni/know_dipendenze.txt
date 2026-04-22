@@ -1,0 +1,27 @@
+ Le librerie che useremo:
+
+  ┌───────────────────┬───────────────────────────────────────────────────────┐
+  │     Libreria      │                  Ruolo nel progetto                   │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ fastapi           │ crea gli endpoint REST (/auth/login, /production/...) │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ uvicorn           │ server che manda in esecuzione FastAPI                │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ sqlalchemy        │ ORM — scrive query SQL tramite oggetti Python         │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ asyncpg           │ driver asincrono per connettersi a PostgreSQL         │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ psycopg2-binary   │ driver sincrono PostgreSQL (usato da Alembic)         │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ alembic           │ gestisce le migrazioni del database                   │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ python-jose       │ genera e verifica i token JWT                         │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ passlib[bcrypt]   │ fa l'hashing delle password prima di salvarle nel DB  │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ pandas            │ legge e analizza il CSV con i dati solari             │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ pydantic-settings │ legge le variabili da .env in modo tipizzato          │
+  ├───────────────────┼───────────────────────────────────────────────────────┤
+  │ python-multipart  │ permette l'upload di file via HTTP (per il CSV)       │
+  └───────────────────┴───────────────────────────────────────────────────────┘

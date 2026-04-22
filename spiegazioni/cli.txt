@@ -1,0 +1,52 @@
+ cli.py è il client a riga di comando che permette di interagire con l'API senza usare Swagger
+  o strumenti come curl. Usa la libreria standard argparse per definire i comandi e requests
+  per fare le chiamate HTTP.
+
+  ---
+  Gestione del token
+
+  Dopo il login, il token JWT viene salvato in un file di testo nella home dell'utente:
+  ~/.energia_token (su Windows: C:\Users\<nome>\.energia_token).
+
+  Ad ogni comando successivo, _load_token() legge il file e costruisce l'header
+  Authorization: Bearer <token>. Se il file non esiste, stampa un messaggio di errore
+  e termina — l'utente deve fare il login prima.
+
+  Questo meccanismo simula quello di strumenti come Docker CLI o kubectl, che salvano
+  le credenziali localmente per non chiederle ad ogni comando.
+
+  ---
+  Struttura dei comandi
+
+  I comandi sono definiti con subparser — ogni sottocomando ha i propri argomenti:
+
+  ┌─────────────────────┬────────────────────────────────────────────────────────────┐
+  │      Comando        │                        Azione                              │
+  ├─────────────────────┼────────────────────────────────────────────────────────────┤
+  │ login               │ POST /auth/login → salva JWT in ~/.energia_token           │
+  ├─────────────────────┼────────────────────────────────────────────────────────────┤
+  │ top-hours [--limit] │ GET /production/top-hours?limit=N                          │
+  ├─────────────────────┼────────────────────────────────────────────────────────────┤
+  │ top-radiation       │ GET /production/top-radiation?limit=N                      │
+  ├─────────────────────┼────────────────────────────────────────────────────────────┤
+  │ monthly-aggregate   │ GET /production/monthly-aggregate                          │
+  ├─────────────────────┼────────────────────────────────────────────────────────────┤
+  │ averages            │ GET /production/averages                                   │
+  ├─────────────────────┼────────────────────────────────────────────────────────────┤
+  │ suggestions         │ GET /production/suggestions                                │
+  ├─────────────────────┼────────────────────────────────────────────────────────────┤
+  │ upload-csv <file>   │ POST /admin/upload-csv — invia il file come multipart form │
+  └─────────────────────┴────────────────────────────────────────────────────────────┘
+
+  ---
+  Dispatching
+
+  Il blocco match/case alla fine di main() smista l'esecuzione al comando corretto in base
+  a args.command. È l'equivalente di uno switch: ogni caso chiama la funzione appropriata
+  (cmd_login, cmd_get, cmd_upload_csv).
+
+  cmd_get è una funzione generica riusabile da più comandi: riceve solo il path dell'endpoint
+  e fa la GET con il token. Evita di duplicare il codice di richiesta per ogni comando.
+
+  In caso di errore HTTP (status != 200), la CLI stampa il codice e il messaggio e termina
+  con sys.exit(1) — convenzione Unix per segnalare fallimento agli script che la invocano.

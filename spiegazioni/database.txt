@@ -1,0 +1,22 @@
+ Ogni volta che un endpoint riceve una richiesta e deve leggere o scrivere dati, ha bisogno di una connessione al
+  database. Aprire una connessione nuova per ogni richiesta è costoso — richiede tempo e risorse.
+
+  database.py risolve questo con tre componenti:
+
+  1. Engine
+  L'engine è il "motore" centrale di SQLAlchemy. Gestisce un connection pool — un insieme di connessioni già aperte e
+  pronte all'uso. Quando arriva una richiesta, prende una connessione dal pool; quando la richiesta finisce, la
+  restituisce al pool (non la chiude).
+
+  2. SessionLocal
+  Una sessione è l'unità di lavoro con il DB — raccoglie le operazioni (INSERT, SELECT, UPDATE) e le esegue.
+  SessionLocal è la factory che crea sessioni. Ogni richiesta HTTP ottiene la propria sessione indipendente.
+
+  3. get_db (dependency)
+  È una funzione generatore usata come dependency injection di FastAPI. Ogni router che ha bisogno del DB la dichiara
+  come parametro — FastAPI la chiama automaticamente, passa la sessione all'endpoint, e garantisce che la sessione venga
+   chiusa al termine della richiesta, anche in caso di errore.
+
+  Il flusso è:
+  Richiesta HTTP → FastAPI chiama get_db → crea sessione → passa al router → router fa query → risposta → sessione
+  chiusa
