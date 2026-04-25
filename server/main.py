@@ -6,8 +6,10 @@ from sqlalchemy import select
 from database import engine, Base, SessionLocal
 from models.user import User
 from models.production import SolarProduction  # noqa: F401 — registra il modello in Base.metadata
+from models.job import ImportJob              # noqa: F401 — registra il modello in Base.metadata
 from config import settings
 from routers import auth, production, admin
+import rabbitmq
 
 
 # Contesto per l'hashing delle password usato nella creazione dell'admin iniziale
@@ -38,9 +40,14 @@ async def lifespan(app: FastAPI):
             await db.commit()
             print("✓ Utente admin creato")
 
+    # Connette a RabbitMQ — necessario per pubblicare messaggi da routers/admin.py
+    await rabbitmq.connect()
+    print("✓ Connessione RabbitMQ stabilita")
+
     yield
 
-    # Chiude il connection pool alla chiusura del server
+    # Chiude RabbitMQ e il connection pool DB alla chiusura del server
+    await rabbitmq.close()
     await engine.dispose()
 
 

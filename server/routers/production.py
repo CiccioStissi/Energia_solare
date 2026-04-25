@@ -16,18 +16,6 @@ async def top_hours(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Restituisce le ore del giorno con la più alta produzione energetica media.
-
-    Raggruppa i dati per ora del giorno (0-23) e ordina per media energia decrescente.
-    Con limit=5 restituisce le 5 ore migliori (es. 11:00-12:00, 12:00-13:00, ecc.).
-    Accessibile a tutti gli utenti autenticati (user e admin).
-
-    Args:
-      limit: numero di ore da restituire (1-100, default 10).
-      db: sessione database.
-      current_user: utente autenticato (verifica JWT).
-    """
     return await ProductionService.top_hours(db, limit)
 
 
@@ -37,18 +25,6 @@ async def top_radiation(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Restituisce le ore del giorno con la più alta irradiazione solare media.
-
-    Raggruppa per ora del giorno escludendo i record senza radiation_wm2,
-    e ordina per media irradiazione decrescente.
-    Accessibile a tutti gli utenti autenticati (user e admin).
-
-    Args:
-      limit: numero di ore da restituire (1-100, default 10).
-      db: sessione database.
-      current_user: utente autenticato (verifica JWT).
-    """
     return await ProductionService.top_radiation(db, limit)
 
 
@@ -57,17 +33,6 @@ async def monthly_aggregate(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Restituisce la produzione totale e l'irradiazione media aggregata per mese.
-
-    Raggruppa i dati per anno e mese, utile per analisi stagionali e
-    confronto tra periodi dell'anno.
-    Accessibile a tutti gli utenti autenticati (user e admin).
-
-    Args:
-      db: sessione database.
-      current_user: utente autenticato (verifica JWT).
-    """
     return await ProductionService.monthly_aggregate(db)
 
 
@@ -76,19 +41,6 @@ async def averages(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Restituisce le medie di produzione per ora del giorno e per mese.
-
-    Combina due aggregazioni:
-      - hourly: media e totale per ora del giorno (0-23)
-      - monthly: totale e media irradiazione per anno/mese
-
-    Accessibile a tutti gli utenti autenticati (user e admin).
-
-    Args:
-      db: sessione database.
-      current_user: utente autenticato (verifica JWT).
-    """
     return await ProductionService.averages(db)
 
 
@@ -97,16 +49,4 @@ async def suggestions(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Endpoint batch: restituisce tutte le analisi in un'unica chiamata.
-
-    Aggrega i risultati di top_hours, top_radiation, monthly_aggregate e averages
-    in un singolo oggetto JSON. Permette al client di fare una sola richiesta HTTP
-    invece di quattro separate.
-    Accessibile a tutti gli utenti autenticati (user e admin).
-
-    Args:
-      db: sessione database.
-      current_user: utente autenticato (verifica JWT).
-    """
     return await ProductionService.suggestions(db)

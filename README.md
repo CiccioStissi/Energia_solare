@@ -20,7 +20,8 @@ energia_solare/
 │   ├── main.py                         ← [Template Method] lifespan: startup → run → shutdown
 │   ├── config.py                       ← [Singleton] settings = Settings()
 │   ├── database.py                     ← [Singleton] engine · [Factory] async_sessionmaker
-│   ├── .env                            ← variabili d'ambiente (SECRET_KEY, DB_URL, ...)
+│   ├── rabbitmq.py                     ← [Message Queue] connect / publish / close
+│   ├── .env                            ← variabili d'ambiente (SECRET_KEY, DB_URL, RABBITMQ_URL, ...)
 │   ├── requirements.txt
 │   ├── auth/
 │   │   ├── __init__.py
@@ -30,21 +31,27 @@ energia_solare/
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── user.py
-│   │   └── production.py
+│   │   ├── production.py
+│   │   └── job.py                      ← ImportJob: traccia stato dei job di importazione CSV
 │   ├── schemas/
 │   │   ├── __init__.py
 │   │   ├── auth.py                     ← [DTO] LoginRequest · TokenResponse
 │   │   ├── user.py                     ← [DTO] UserInfo (nasconde hashed_password)
-│   │   └── production.py               ← [DTO] ProductionRecord · SuggestionsResponse · ...
+│   │   ├── production.py               ← [DTO] ProductionRecord · SuggestionsResponse · ...
+│   │   └── job.py                      ← [DTO] JobStatusResponse
 │   ├── routers/
 │   │   ├── __init__.py
 │   │   ├── auth.py                     ← [Remote Facade] POST /auth/login · /register
 │   │   ├── production.py               ← [Remote Facade] GET /production/*
-│   │   └── admin.py                    ← [Remote Facade] POST /admin/upload-csv
-│   └── services/
-│       ├── __init__.py
-│       ├── production.py               ← [Service Layer] · [Request Batch] suggestions()
-│       └── csv_importer.py             ← [Service Layer]
+│   │   └── admin.py                    ← [Remote Facade] POST /admin/upload-csv (202) · GET /admin/job-status/{id}
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── production.py               ← [Service Layer] · [Request Batch] suggestions()
+│   │   └── csv_importer.py             ← [Service Layer]
+│   ├── workers/
+│   │   ├── __init__.py
+│   │   └── csv_worker.py               ← [Message Queue] consumer RabbitMQ — elabora i CSV in modo asincrono
+│   └── uploads/                        ← file CSV temporanei in attesa di elaborazione
 └── moment.txt
 ```
 
@@ -61,6 +68,7 @@ Pattern richiesti dalla specifica del Prof. Tramontana ("Suggerimenti di Progett
 | **DTO** | I modelli Pydantic disaccoppiano la rappresentazione interna ORM dalla superficie API | `schemas/auth.py` · `schemas/user.py` · `schemas/production.py` |
 | **Request Batch** | `suggestions()` aggrega 4 chiamate in un'unica risposta per ridurre i round-trip client/server | `services/production.py` → `suggestions()` |
 | **Token JWT** | Ogni richiesta protetta porta un Bearer token che identifica utente, ruolo e sessione | `auth/jwt.py` · `auth/dependencies.py` · tutti i router protetti |
+| **Message Queue (RabbitMQ)** | L'upload CSV pubblica un messaggio sulla coda e risponde 202 immediatamente; il worker consuma la coda ed elabora il file in modo asincrono e disaccoppiato | `rabbitmq.py` · `routers/admin.py` · `workers/csv_worker.py` |
 
 ---
 
@@ -72,5 +80,4 @@ Pattern opzionali indicati in "Altri Suggerimenti di Progettazione" non implemen
 |---|---|---|
 | **Timeout** | Limite di tempo su operazioni remote per evitare blocchi indefiniti | Servizio interno LAN, nessuna chiamata a sistemi esterni |
 | **Circuit Breaker** | Interrompe automaticamente le chiamate a un servizio non disponibile | Architettura monolitica, nessun microservizio da proteggere |
-| **RabbitMQ** | Messaggistica asincrona tra componenti | Comunicazione sincrona HTTP sufficiente per il caso d'uso |
 | **Spring Boot Microservizi** | Decomposizione del server in microservizi indipendenti | Server implementato con FastAPI (Python) |

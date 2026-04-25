@@ -13,15 +13,6 @@ def create_access_token(data: dict) -> str:
 
     Il payload tipico contiene:
       { "sub": "username", "role": "user"|"admin" }
-
-    Il token non è cifrato, solo firmato: il payload è leggibile in base64,
-    ma non modificabile senza invalidare la firma.
-
-    Args:
-      data: dizionario con i dati da includere nel payload JWT.
-
-    Returns:
-      Stringa JWT firmata.
     """
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -34,15 +25,6 @@ def decode_token(token: str) -> dict:
     Verifica e decodifica un token JWT.
 
     Controlla la firma con SECRET_KEY e verifica che il token non sia scaduto.
-    Se il token è invalido o scaduto, solleva JWTError (gestito da dependencies.py).
-
-    Args:
-      token: stringa JWT da verificare.
-
-    Returns:
-      Dizionario con il payload del token (es. {"sub": "admin", "role": "admin", "exp": ...}).
-
-    Raises:
-      JWTError: se il token è malformato, la firma non corrisponde o il token è scaduto.
+    Se il token è invalido o scaduto, restituisce JWTError (gestito da dependencies.py).
     """
     return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

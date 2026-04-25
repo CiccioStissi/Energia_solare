@@ -14,6 +14,7 @@ class Settings(BaseSettings):
       ALGORITHM                 : algoritmo di firma JWT (default HS256)
       ACCESS_TOKEN_EXPIRE_MINUTES: durata del token in minuti (default 60)
       FIRST_ADMIN_PASSWORD      : password dell'utente admin creato al primo avvio
+      RABBITMQ_URL              : URL di connessione a RabbitMQ (default guest@localhost)
     """
 
     DATABASE_URL: str
@@ -21,6 +22,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     FIRST_ADMIN_PASSWORD: str
+    RABBITMQ_URL: str = "amqp://guest:guest@localhost/"
 
     # Indica a pydantic-settings dove trovare il file .env
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")

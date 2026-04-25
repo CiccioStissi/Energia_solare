@@ -57,13 +57,10 @@ def load_token() -> str | None:
 
 def auth_headers() -> dict | None:
     """
-    Costruisce l'header Authorization con il token Bearer.
+    Costruisce l'header Authorization con il token Bearer. (Autenticazioni API)
 
     Carica il token dal file e lo formatta per le richieste HTTP autenticate.
     Restituisce None se il token non è disponibile.
-
-    Returns:
-      Dizionario con 'Authorization: Bearer <token>', oppure None.
     """
     token = load_token()
     if not token:
@@ -104,8 +101,7 @@ def op_top_hours():
     Chiede il numero di risultati e mostra le ore con più produzione media.
 
     Chiama GET /production/top-hours?limit=N con il token salvato.
-    Mostra le N ore del giorno (es. "12:00 - 13:00") ordinate per
-    produzione media decrescente.
+    Mostra le N ore del giorno ordinate per produzione media decrescente.
     """
     sep("TOP HOURS")
     limit = input("  Limit [default 10]: ").strip()
@@ -147,7 +143,6 @@ def op_monthly_aggregate():
     Mostra la produzione totale e l'irradiazione media per ogni mese.
 
     Chiama GET /production/monthly-aggregate con il token salvato.
-    Utile per analisi stagionali e confronto tra periodi dell'anno.
     """
     sep("MONTHLY AGGREGATE")
     headers = auth_headers()
@@ -166,8 +161,6 @@ def op_averages():
     Mostra le medie di produzione per ora del giorno e per mese.
 
     Chiama GET /production/averages con il token salvato.
-    La risposta contiene due sezioni: 'hourly' (profilo giornaliero medio)
-    e 'monthly' (andamento mensile).
     """
     sep("AVERAGES")
     headers = auth_headers()
@@ -183,14 +176,10 @@ def op_averages():
 
 def op_suggestions():
     """
-    Mostra il report completo con tutte le analisi in un'unica chiamata.
-
+    Mostra il report completo con tutte le analisi in un'unica chiamata (unico oggetto JSON).
     Chiama GET /production/suggestions con il token salvato.
-    Restituisce top_hours, top_radiation, monthly_aggregate e averages
-    in un unico oggetto JSON — equivale a chiamare tutti gli altri
-    endpoint GET insieme.
     """
-    sep("SUGGESTIONS (batch)")
+    sep("Batch")
     headers = auth_headers()
     if not headers:
         return
@@ -207,8 +196,10 @@ def op_upload_csv():
     Chiede il percorso del CSV e lo invia al server (solo admin).
 
     Chiama POST /admin/upload-csv con il token salvato come multipart form.
+    Il server risponde subito con 202 Accepted e un job_id: l'elaborazione
+    avviene in modo asincrono tramite RabbitMQ e il worker csv_worker.py.
+    Dopo l'upload chiede se fare polling automatico sullo stato del job.
     Se l'utente non è admin, il server risponderà con 403 Forbidden.
-    Il percorso default punta al file di esempio incluso nel progetto.
     """
     sep("UPLOAD CSV (solo admin)")
     path = input("  Percorso file CSV [default ../data/solar_production.csv]: ").strip()
@@ -227,8 +218,60 @@ def op_upload_csv():
             headers=headers,
             files={"file": (csv_path.name, f, "text/csv")},
         )
+    if resp.status_code == 202:
+        data = resp.json()
+        job_id = data["job_id"]
+        print(f"\n[OK] CSV in coda. job_id: {job_id}")
+        print(f"     Usa l'opzione 10 per controllare lo stato del job.")
+
+        poll = input("\n  Fare polling automatico ogni 2s? [s/N]: ").strip().lower()
+        if poll == "s":
+            import time
+            print("  Polling in corso (Ctrl+C per interrompere)...")
+            try:
+                while True:
+                    time.sleep(2)
+                    r = _get(f"/admin/job-status/{job_id}", headers=headers)
+                    if r.status_code == 200:
+                        status_data = r.json()
+                        status = status_data["status"]
+                        print(f"  Status: {status}", end="")
+                        if status == "done":
+                            print(f" — {status_data['rows_imported']} righe importate")
+                            break
+                        elif status == "failed":
+                            print(f" — ERRORE: {status_data['error']}")
+                            break
+                        else:
+                            print()
+                    else:
+                        print(f"  [FAIL] {r.status_code}: {r.text}")
+                        break
+            except KeyboardInterrupt:
+                print("\n  Polling interrotto.")
+    else:
+        print(f"\n[FAIL] {resp.status_code}: {resp.text}")
+
+
+def op_job_status():
+    """
+    Controlla lo stato di un job di importazione CSV tramite job_id.
+
+    Chiama GET /admin/job-status/{job_id} con il token salvato.
+    Mostra status, righe importate o messaggio di errore.
+    """
+    sep("JOB STATUS (solo admin)")
+    job_id = input("  job_id: ").strip()
+    if not job_id:
+        print("\n[ERRORE] job_id obbligatorio.")
+        return
+    headers = auth_headers()
+    if not headers:
+        return
+    resp = _get(f"/admin/job-status/{job_id}", headers=headers)
     if resp.status_code == 200:
-        print(f"\n[OK] {resp.json()['message']}")
+        print("\n[OK] Stato job:")
+        print_json(resp.json())
     else:
         print(f"\n[FAIL] {resp.status_code}: {resp.text}")
 
@@ -243,10 +286,6 @@ def op_register():
     salva solo le credenziali nel database — NON autentica l'utente.
     Per accedere agli endpoint è necessario fare il login (opzione 1)
     dopo la registrazione.
-
-    Blocchi gestiti:
-      - Username 'admin': riservato, non registrabile (403)
-      - Username già esistente (409)
     """
     sep("REGISTRA NUOVO UTENTE")
     username = input("  Username: ").strip()
@@ -255,6 +294,11 @@ def op_register():
     if resp.status_code == 201:
         print(f"\n[OK] {resp.json()['message']}")
         print("  Utente creato. Usa l'opzione 1 (Login) per autenticarti.")
+        # Rimuove il token di eventuali sessioni precedenti: l'utente appena
+        # registrato non è ancora autenticato e non deve poter eseguire operazioni.
+        if TOKEN_FILE.exists():
+            TOKEN_FILE.unlink()
+            print("  [INFO] Token precedente rimosso — effettua il login.")
     elif resp.status_code == 403:
         print(f"\n[FAIL] Username riservato — non puoi registrarti come admin")
     elif resp.status_code == 409:
@@ -292,12 +336,6 @@ def op_verify_token():
 
 
 def main():
-    """
-    Punto di ingresso del test interattivo. Mostra il menu e gestisce le scelte.
-
-    Ciclo infinito che stampa il menu ad ogni iterazione e chiama la funzione
-    corrispondente alla scelta dell'utente. Termina solo con l'opzione '0'.
-    """
     print("\n  Energia Solare API — Test Interattivo")
     print(f"  Server: {BASE_URL}")
 
@@ -312,6 +350,7 @@ def main():
         print("  7. Averages")
         print("  8. Suggestions (batch)")
         print("  9. Upload CSV (admin)")
+        print(" 10. Job Status (admin)")
         print("  0. Esci")
 
         scelta = input("\nScelta: ").strip()
@@ -337,6 +376,8 @@ def main():
             op_suggestions()
         elif scelta == "9":
             op_upload_csv()
+        elif scelta == "10":
+            op_job_status()
         else:
             print("[ERRORE] Scelta non valida.")
 

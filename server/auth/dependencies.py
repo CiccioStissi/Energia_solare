@@ -22,7 +22,7 @@ async def get_current_user(
     Dependency che verifica il token JWT e restituisce l'utente autenticato.
 
     Viene iniettata da FastAPI in tutti gli endpoint che richiedono autenticazione,
-    sia per utenti normali che per admin. È il primo livello di protezione degli endpoint.
+    sia per utenti normali che per admin.
 
     Flusso:
       1. Estrae il token Bearer dall'header Authorization
@@ -30,16 +30,6 @@ async def get_current_user(
       3. Ricava lo username dal campo 'sub' del payload
       4. Cerca l'utente nel database
       5. Restituisce l'oggetto User se tutto è valido
-
-    Args:
-      credentials: token Bearer estratto automaticamente dall'header HTTP.
-      db: sessione database iniettata da get_db.
-
-    Returns:
-      Oggetto User corrispondente al token.
-
-    Raises:
-      HTTPException 401: se il token è invalido, scaduto, o l'utente non esiste.
     """
     token = credentials.credentials
     try:
@@ -70,15 +60,6 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
     Si appoggia su get_current_user: prima verifica che il token sia valido,
     poi controlla che l'utente abbia il ruolo corretto. È usata esclusivamente
     sull'endpoint POST /admin/upload-csv.
-
-    Args:
-      user: utente autenticato restituito da get_current_user.
-
-    Returns:
-      L'oggetto User se il ruolo è 'admin'.
-
-    Raises:
-      HTTPException 403: se l'utente è autenticato ma non ha ruolo admin.
     """
     if user.role != "admin":
         raise HTTPException(
