@@ -1,7 +1,7 @@
 # Energia Solare API
 
 Servizio REST per l'interrogazione di un dataset di produzione di energia solare.  
-Stack: **FastAPI (Framework per la creazione di API) ** · **SQLAlchemy (Libreria python per interagire con db relazionali)** · **PostgreSQL (db) ** · **JWT** · **Pydantic v2 (gestione dipendenzde e compatibilità FastAPI) ** · **pandas**
+Stack: **FastAPI (Framework per la creazione di API)** · **SQLAlchemy (Libreria python per interagire con db relazionali)** · **PostgreSQL (db)** · **JWT** · **Pydantic v2 (gestione dipendenzde e compatibilità FastAPI)** · **pandas**
 
 ---
 
