@@ -86,14 +86,12 @@ ogni 2 secondi chiama `GET /admin/job-status/{job_id}` finché lo status non è 
 **Prerequisiti:** RabbitMQ installato, PostgreSQL attivo, venv con dipendenze installate.
 
 ```bash
-# Installa dipendenze (una volta sola)
 pip install -r server/requirements.txt
 
-# Avvia tutto (RabbitMQ check + FastAPI + worker)
 ./start.sh
 ```
 
-`start.sh` verifica se RabbitMQ è già attivo (porta 5672), poi avvia `uvicorn` e `csv_worker` in background. Ctrl+C ferma tutto.
+`start.sh` verifica se RabbitMQ è già attivo (porta 5672), poi avvia `uvicorn` e `csv_worker` in background.
 
 **Client** (terminale separato):
 ```bash
@@ -110,19 +108,16 @@ http://localhost:8000/docs
 
 ### Configurazione (.env)
 
-Il file `server/.env` contiene le variabili d'ambiente. Non va mai committato su git.
-
-| Variabile | Scopo | Esempio |
+| Variabile | Scopo |
 |---|---|---|
-| `DATABASE_URL` | Connessione PostgreSQL | `postgresql+asyncpg://user:pass@localhost/energia` |
-| `SECRET_KEY` | Chiave firma JWT (lunga e casuale) | `openssl rand -hex 32` |
-| `ALGORITHM` | Algoritmo JWT | `HS256` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Durata token | `60` |
-| `FIRST_ADMIN_PASSWORD` | Password admin al primo avvio | `adminpass123` |
-| `RABBITMQ_URL` | URL broker RabbitMQ | `amqp://guest:guest@localhost/` |
+| `DATABASE_URL` | Connessione PostgreSQL | 
+| `SECRET_KEY` | Chiave firma JWT (lunga e casuale) | 
+| `ALGORITHM` | Algoritmo JWT |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Durata token | 
+| `FIRST_ADMIN_PASSWORD` | Password admin al primo avvio | 
+| `RABBITMQ_URL` | URL broker RabbitMQ | 
 
-`config.py` legge `.env` tramite `pydantic-settings` e valida i tipi all'avvio — se una variabile manca, il server crasha immediatamente con un messaggio chiaro.
-
+`config.py` legge `.env` tramite `pydantic-settings`
 ---
 
 ### Endpoints disponibili
@@ -207,13 +202,3 @@ Pattern richiesti dalla specifica del Prof. Tramontana ("Suggerimenti di Progett
 | **Message Queue (RabbitMQ)** | L'upload CSV pubblica un messaggio sulla coda e risponde 202 immediatamente; il worker consuma la coda ed elabora il file in modo asincrono e disaccoppiato | `rabbitmq.py` · `routers/admin.py` · `workers/csv_worker.py` |
 
 ---
-
-## Pattern Mancanti
-
-Pattern opzionali indicati in "Altri Suggerimenti di Progettazione" non implementati:
-
-| Pattern | Descrizione | Motivazione assenza |
-|---|---|---|
-| **Timeout** | Limite di tempo su operazioni remote per evitare blocchi indefiniti | Servizio interno LAN, nessuna chiamata a sistemi esterni |
-| **Circuit Breaker** | Interrompe automaticamente le chiamate a un servizio non disponibile | Architettura monolitica, nessun microservizio da proteggere |
-| **Spring Boot Microservizi** | Decomposizione del server in microservizi indipendenti | Server implementato con FastAPI (Python) |
