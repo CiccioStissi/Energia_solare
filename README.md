@@ -30,10 +30,10 @@ Il progetto è composto da tre processi indipendenti che collaborano:
                                     └─────────────────┘
 ```
 
-- **Client** (`test_all.py`) — menu interattivo da terminale. Invia richieste HTTP al server e mostra i risultati.
-- **Server** (`main.py`) — API REST FastAPI. Gestisce autenticazione, query sui dati e upload CSV. Al primo avvio crea automaticamente l'utente `admin`.
-- **RabbitMQ** — message broker. Riceve i job di importazione CSV dal server e li consegna al worker.
-- **Worker** (`csv_worker.py`) — processo separato che elabora i file CSV in background, aggiorna il database e aggiorna lo stato del job.
+- **Client** (`test_all.py`) —> menu interattivo da terminale. Invia richieste HTTP al server e mostra i risultati.
+- **Server** (`main.py`) —> API REST FastAPI. Gestisce autenticazione, query sui dati e upload CSV. Al primo avvio crea automaticamente l'utente `admin`.
+- **RabbitMQ** —> message broker. Riceve i job di importazione CSV dal server e li consegna al worker.
+- **Worker** (`csv_worker.py`) —> processo separato che elabora i file CSV in background, aggiorna il database e aggiorna lo stato del job.
 
 ---
 
