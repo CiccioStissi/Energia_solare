@@ -1,7 +1,143 @@
 # Energia Solare API
 
 Servizio REST per l'interrogazione di un dataset di produzione di energia solare.  
-Stack: **FastAPI (Framework per la creazione di API)** · **SQLAlchemy (Libreria python per interagire con db relazionali)** · **PostgreSQL (db)** · **JWT** · **Pydantic v2 (gestione dipendenzde e compatibilità FastAPI)** · **pandas**
+Stack: **FastAPI** · **SQLAlchemy (async)** · **PostgreSQL** · **JWT** · **Pydantic v2** · **pandas** · **RabbitMQ**
+
+---
+
+## Come Funziona
+
+### Architettura generale
+
+Il progetto è composto da tre processi indipendenti che collaborano:
+
+```
+┌─────────────────┐      HTTP       ┌─────────────────┐
+│  client/        │ ─────────────▶  │  FastAPI server  │
+│  test_all.py    │ ◀─────────────  │  (main.py)       │
+└─────────────────┘                 └────────┬─────────┘
+                                             │ pubblica messaggio
+                                             ▼
+                                    ┌─────────────────┐
+                                    │    RabbitMQ      │
+                                    │    (broker)      │
+                                    └────────┬─────────┘
+                                             │ consuma messaggio
+                                             ▼
+                                    ┌─────────────────┐
+                                    │  csv_worker.py   │
+                                    │  (worker)        │
+                                    └─────────────────┘
+```
+
+- **Client** (`test_all.py`) — menu interattivo da terminale. Invia richieste HTTP al server e mostra i risultati.
+- **Server** (`main.py`) — API REST FastAPI. Gestisce autenticazione, query sui dati e upload CSV. Al primo avvio crea automaticamente l'utente `admin`.
+- **RabbitMQ** — message broker. Riceve i job di importazione CSV dal server e li consegna al worker.
+- **Worker** (`csv_worker.py`) — processo separato che elabora i file CSV in background, aggiorna il database e aggiorna lo stato del job.
+
+---
+
+### Autenticazione (JWT)
+
+Ogni endpoint protetto richiede un token Bearer. Il flusso è:
+
+```
+Client                          Server
+  │                               │
+  │  POST /auth/login             │
+  │  { username, password }  ───▶ │  verifica credenziali nel DB
+  │                               │  genera JWT firmato con SECRET_KEY
+  │  { access_token }        ◀─── │
+  │                               │
+  │  GET /production/top-hours    │
+  │  Authorization: Bearer <token>│
+  │                          ───▶ │  decodifica JWT → estrae user + ruolo
+  │                               │  autorizza se ruolo corretto
+  │  [ risultati ]           ◀─── │
+```
+
+Il token JWT contiene: `user_id`, `username`, `role` (`user` o `admin`). Scade dopo `ACCESS_TOKEN_EXPIRE_MINUTES` minuti (configurabile in `.env`). Il client lo salva nel file `.energia_token` e lo riutilizza per tutte le chiamate successive.
+
+---
+
+### Upload CSV asincrono (Message Queue)
+
+L'upload CSV non blocca il server — usa RabbitMQ per disaccoppiare ricezione ed elaborazione:
+
+```
+1. Client invia il file CSV → POST /admin/upload-csv
+2. Server salva il file in uploads/, crea un job nel DB (status: "pending")
+   e pubblica un messaggio { job_id, file_path } sulla coda RabbitMQ
+3. Server risponde subito → 202 Accepted + job_id   (non aspetta l'elaborazione)
+4. Worker riceve il messaggio dalla coda
+5. Worker aggiorna job → status: "processing"
+6. Worker legge il CSV, importa le righe nel DB
+7. Worker aggiorna job → status: "done" (o "failed" in caso di errore)
+8. Worker invia ACK a RabbitMQ → messaggio rimosso dalla coda
+```
+
+Il client può monitorare l'avanzamento con il **polling automatico** (opzione `s` dopo l'upload):  
+ogni 2 secondi chiama `GET /admin/job-status/{job_id}` finché lo status non è `done` o `failed`.
+
+---
+
+### Avvio del sistema
+
+**Prerequisiti:** RabbitMQ installato, PostgreSQL attivo, venv con dipendenze installate.
+
+```bash
+# Installa dipendenze (una volta sola)
+pip install -r server/requirements.txt
+
+# Avvia tutto (RabbitMQ check + FastAPI + worker)
+./start.sh
+```
+
+`start.sh` verifica se RabbitMQ è già attivo (porta 5672), poi avvia `uvicorn` e `csv_worker` in background. Ctrl+C ferma tutto.
+
+**Client** (terminale separato):
+```bash
+source venv/bin/activate
+python client/test_all.py
+```
+
+**Swagger UI** (alternativa grafica al client):
+```
+http://localhost:8000/docs
+```
+
+---
+
+### Configurazione (.env)
+
+Il file `server/.env` contiene le variabili d'ambiente. Non va mai committato su git.
+
+| Variabile | Scopo | Esempio |
+|---|---|---|
+| `DATABASE_URL` | Connessione PostgreSQL | `postgresql+asyncpg://user:pass@localhost/energia` |
+| `SECRET_KEY` | Chiave firma JWT (lunga e casuale) | `openssl rand -hex 32` |
+| `ALGORITHM` | Algoritmo JWT | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Durata token | `60` |
+| `FIRST_ADMIN_PASSWORD` | Password admin al primo avvio | `adminpass123` |
+| `RABBITMQ_URL` | URL broker RabbitMQ | `amqp://guest:guest@localhost/` |
+
+`config.py` legge `.env` tramite `pydantic-settings` e valida i tipi all'avvio — se una variabile manca, il server crasha immediatamente con un messaggio chiaro.
+
+---
+
+### Endpoints disponibili
+
+| Metodo | Endpoint | Ruolo | Descrizione |
+|---|---|---|---|
+| `POST` | `/auth/register` | pubblico | Registra nuovo utente |
+| `POST` | `/auth/login` | pubblico | Login → JWT |
+| `GET` | `/production/top-hours` | user/admin | Ore del giorno con più produzione media |
+| `GET` | `/production/top-radiation` | user/admin | Ore con più irradiazione media |
+| `GET` | `/production/monthly-aggregate` | user/admin | Produzione totale per mese |
+| `GET` | `/production/averages` | user/admin | Medie orarie e mensili |
+| `GET` | `/production/suggestions` | user/admin | Tutte le analisi in un'unica risposta (Request Batch) |
+| `POST` | `/admin/upload-csv` | admin | Upload CSV → job asincrono via RabbitMQ |
+| `GET` | `/admin/job-status/{id}` | admin | Stato elaborazione job CSV |
 
 ---
 

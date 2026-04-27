@@ -6,15 +6,6 @@ class Settings(BaseSettings):
     Configurazione centralizzata dell'applicazione.
 
     Legge automaticamente le variabili dal file .env grazie a pydantic-settings.
-    Se una variabile obbligatoria manca o ha tipo errato, l'app crasha all'avvio
-    con un messaggio chiaro — meglio scoprirlo subito che a runtime.
-
-      DATABASE_URL              : stringa di connessione a PostgreSQL (asyncpg)
-      SECRET_KEY                : chiave segreta per firmare i JWT
-      ALGORITHM                 : algoritmo di firma JWT (default HS256)
-      ACCESS_TOKEN_EXPIRE_MINUTES: durata del token in minuti (default 60)
-      FIRST_ADMIN_PASSWORD      : password dell'utente admin creato al primo avvio
-      RABBITMQ_URL              : URL di connessione a RabbitMQ (default guest@localhost)
     """
 
     DATABASE_URL: str

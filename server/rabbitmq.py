@@ -4,9 +4,6 @@ Modulo RabbitMQ — gestione connessione e pubblicazione messaggi.
 Implementa il pattern Message Queue: il producer (FastAPI) pubblica
 un messaggio sulla coda senza attendere l'elaborazione. Il consumer
 (csv_worker.py) legge e processa i messaggi in modo asincrono e indipendente.
-
-Connessione lazy: viene aperta al primo utilizzo e riutilizzata per
-tutte le richieste successive (connection pooling implicito di aio-pika).
 """
 
 import json
@@ -25,10 +22,6 @@ _channel: AbstractChannel | None = None
 async def connect() -> None:
     """
     Apre la connessione a RabbitMQ e il canale di comunicazione.
-
-    Chiamata una volta sola nel lifespan di FastAPI all'avvio del server.
-    Usa connect_robust per riconnettersi automaticamente in caso di
-    disconnessione temporanea dal broker.
     """
     global _connection, _channel
     _connection = await aio_pika.connect_robust(settings.RABBITMQ_URL)
@@ -55,12 +48,8 @@ async def publish(queue_name: str, message: dict) -> None:
     Pubblica un messaggio JSON su una coda RabbitMQ.
 
     Usa il default exchange con routing_key = nome della coda (direct routing).
-    Il messaggio è marcato PERSISTENT: viene salvato su disco dal broker e
-    non viene perso in caso di riavvio di RabbitMQ prima che il consumer lo legga.
-
-    Args:
-      queue_name: nome della coda destinataria.
-      message: dizionario Python serializzato automaticamente in JSON.
+    Il messaggio è marcato PERSISTENT --> viene salvato su disco dal broker e
+    non viene perso in caso di chiusura RabbitMQ.
     """
     if _channel is None:
         raise RuntimeError("Canale RabbitMQ non inizializzato. Chiamare connect() prima.")

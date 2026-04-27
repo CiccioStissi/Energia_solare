@@ -5,8 +5,8 @@ from sqlalchemy import select
 
 from database import engine, Base, SessionLocal
 from models.user import User
-from models.production import SolarProduction  # noqa: F401 — registra il modello in Base.metadata
-from models.job import ImportJob              # noqa: F401 — registra il modello in Base.metadata
+from models.production import SolarProduction  # registra il modello in Base.metadata
+from models.job import ImportJob              # registra il modello in Base.metadata
 from config import settings
 from routers import auth, production, admin
 import rabbitmq
