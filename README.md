@@ -62,7 +62,7 @@ Il token JWT contiene: `user_id`, `username`, `role` (`user` o `admin`). Scade d
 
 ### Upload CSV asincrono (Message Queue)
 
-L'upload CSV non blocca il server — usa RabbitMQ per disaccoppiare ricezione ed elaborazione:
+L'upload CSV non blocca il server ma usa RabbitMQ per disaccoppiare ricezione ed elaborazione:
 
 ```
 1. Client invia il file CSV → POST /admin/upload-csv
