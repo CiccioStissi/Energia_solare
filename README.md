@@ -30,16 +30,16 @@ Il progetto è composto da tre processi indipendenti che collaborano:
                                     └─────────────────┘
 ```
 
-- **Client** (`test_all.py`) —> menu interattivo da terminale. Invia richieste HTTP al server e mostra i risultati.
-- **Server** (`main.py`) —> API REST FastAPI. Gestisce autenticazione, query sui dati e upload CSV. Al primo avvio crea automaticamente l'utente `admin`.
-- **RabbitMQ** —> message broker. Riceve i job di importazione CSV dal server e li consegna al worker.
+- **Client** (`test_all.py`) —> menu interattivo da terminale.
+- **Server** (`main.py`) —> API REST FastAPI, gestisce autenticazione, query sui dati e upload CSV.
+- **RabbitMQ** —> message broker che riceve i job di importazione CSV dal server e li consegna al worker.
 - **Worker** (`csv_worker.py`) —> processo separato che elabora i file CSV in background, aggiorna il database e aggiorna lo stato del job.
 
 ---
 
 ### Autenticazione (JWT)
 
-Ogni endpoint protetto richiede un token Bearer. Il flusso è:
+Ogni endpoint protetto richiede un token Bearer, il flusso che segue il progetto è:
 
 ```
 Client                          Server
@@ -76,14 +76,13 @@ L'upload CSV non blocca il server ma usa RabbitMQ per disaccoppiare ricezione ed
 8. Worker invia ACK a RabbitMQ → messaggio rimosso dalla coda
 ```
 
-Il client può monitorare l'avanzamento con il **polling automatico** (opzione `s` dopo l'upload):  
+Il client può monitorare l'avanzamento con il **polling automatico**:  
 ogni 2 secondi chiama `GET /admin/job-status/{job_id}` finché lo status non è `done` o `failed`.
 
 ---
 
-### Avvio del sistema
+### Prima di iniziare:
 
-**Prerequisiti:** RabbitMQ installato, PostgreSQL attivo, venv con dipendenze installate.
 
 ```bash
 pip install -r server/requirements.txt
