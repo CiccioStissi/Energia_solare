@@ -1,6 +1,5 @@
 # Energia Solare API
-
-Servizio REST per l'interrogazione di un dataset di produzione di energia solare.  
+  
 Utilizzo: **FastAPI** · **SQLAlchemy (async, utilizzato per manipolare database relazionali)** · **PostgreSQL** · **JWT** · **Pydantic v2 (riscrittura da zero delle librerie)** · **pandas** · **RabbitMQ**
 
 ---
