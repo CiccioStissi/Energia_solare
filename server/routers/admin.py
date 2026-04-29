@@ -52,16 +52,13 @@ async def upload_csv(
     UPLOADS_DIR.mkdir(exist_ok=True)
     file_path = UPLOADS_DIR / f"{job_id}.csv"
 
-    # Salva il file su disco: il worker lo leggerà dalla stessa path
     content = await file.read()
     file_path.write_bytes(content)
 
-    # Crea il record di tracciamento nel DB
     job = ImportJob(id=job_id, filename=file.filename, status="queued")
     db.add(job)
     await db.commit()
 
-    # Pubblica il messaggio sulla coda — operazione non bloccante
     await rabbitmq.publish(
         rabbitmq.CSV_IMPORT_QUEUE,
         {"job_id": job_id, "file_path": str(file_path)},
@@ -82,17 +79,6 @@ async def job_status(
     Permette all'admin di fare polling dopo aver caricato un CSV con
     POST /admin/upload-csv. Lo status passa da 'queued' → 'processing'
     → 'done' (con rows_imported) oppure → 'failed' (con error).
-
-    Args:
-      job_id: UUID del job restituito da POST /admin/upload-csv.
-      db: sessione database.
-      current_user: deve avere ruolo 'admin'.
-
-    Returns:
-      JobStatusResponse con tutti i dettagli del job.
-
-    Raises:
-      HTTPException 404: se il job_id non esiste.
     """
     result = await db.execute(select(ImportJob).where(ImportJob.id == job_id))
     job = result.scalar_one_or_none()

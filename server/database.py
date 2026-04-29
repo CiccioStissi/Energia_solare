@@ -4,13 +4,8 @@ from sqlalchemy.orm import DeclarativeBase
 from config import settings
 
 
-# Engine asincrono: gestisce il connection pool verso PostgreSQL.
-# echo=False disabilita il logging SQL in console (impostare True per debug).
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
-# Factory per creare sessioni asincrone.
-# expire_on_commit=False evita che gli oggetti vengano "scaduti" dopo il commit,
-# permettendo di accedere ai loro attributi senza riaprire la sessione.
 SessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,

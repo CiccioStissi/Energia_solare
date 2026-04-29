@@ -12,7 +12,6 @@ from aio_pika.abc import AbstractRobustConnection, AbstractChannel
 
 from config import settings
 
-# Nome della coda usata per i job di importazione CSV
 CSV_IMPORT_QUEUE = "csv_import"
 
 _connection: AbstractRobustConnection | None = None
@@ -26,9 +25,7 @@ async def connect() -> None:
     global _connection, _channel
     _connection = await aio_pika.connect_robust(settings.RABBITMQ_URL)
     _channel = await _connection.channel()
-    # Limita a 10 messaggi non confermati per volta: evita di sovraccaricare il consumer
     await _channel.set_qos(prefetch_count=10)
-    # Dichiara la coda come durable=True: i messaggi sopravvivono al riavvio di RabbitMQ
     await _channel.declare_queue(CSV_IMPORT_QUEUE, durable=True)
 
 

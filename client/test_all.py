@@ -9,7 +9,6 @@ import requests
 
 BASE_URL = "http://localhost:8000"
 
-# Il token viene salvato nella stessa cartella dello script
 TOKEN_FILE = Path(__file__).parent / ".energia_token"
 
 
@@ -68,7 +67,6 @@ def auth_headers() -> dict | None:
     return {"Authorization": f"Bearer {token}"}
 
 
-# ── OPERAZIONI ────────────────────────────────────────────
 
 def op_login():
     """
@@ -276,7 +274,6 @@ def op_job_status():
         print(f"\n[FAIL] {resp.status_code}: {resp.text}")
 
 
-# ── REGISTRAZIONE ─────────────────────────────────────────
 
 def op_register():
     """
@@ -294,8 +291,6 @@ def op_register():
     if resp.status_code == 201:
         print(f"\n[OK] {resp.json()['message']}")
         print("  Utente creato. Usa l'opzione 1 (Login) per autenticarti.")
-        # Rimuove il token di eventuali sessioni precedenti: l'utente appena
-        # registrato non è ancora autenticato e non deve poter eseguire operazioni.
         if TOKEN_FILE.exists():
             TOKEN_FILE.unlink()
             print("  [INFO] Token precedente rimosso — effettua il login.")
@@ -307,7 +302,6 @@ def op_register():
         print(f"\n[FAIL] {resp.status_code}: {resp.text}")
 
 
-# ── MENU ──────────────────────────────────────────────────
 
 def op_verify_token():
     """

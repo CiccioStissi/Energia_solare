@@ -26,7 +26,6 @@ from pathlib import Path
 import aio_pika
 from sqlalchemy import select
 
-# Aggiunge la cartella server/ al path per poter importare i moduli locali
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from config import settings
@@ -44,9 +43,6 @@ async def process_message(message: aio_pika.IncomingMessage) -> None:
 
     Riceve il messaggio, aggiorna il job su DB, elabora il CSV e
     invia l'ack solo a elaborazione completata (at-least-once delivery).
-
-    Args:
-      message: messaggio aio-pika con body JSON contenente job_id e file_path.
     """
     async with message.process(requeue=True):
         body = json.loads(message.body.decode())
@@ -56,7 +52,6 @@ async def process_message(message: aio_pika.IncomingMessage) -> None:
         print(f"[WORKER] Job ricevuto: {job_id} — file: {file_path.name}")
 
         async with SessionLocal() as db:
-            # Recupera il job dal DB
             result = await db.execute(select(ImportJob).where(ImportJob.id == job_id))
             job = result.scalar_one_or_none()
 
@@ -64,7 +59,6 @@ async def process_message(message: aio_pika.IncomingMessage) -> None:
                 print(f"[WORKER] Job {job_id} non trovato nel DB — scarto il messaggio")
                 return
 
-            # Aggiorna status a 'processing'
             job.status = "processing"
             await db.commit()
 
@@ -83,7 +77,6 @@ async def process_message(message: aio_pika.IncomingMessage) -> None:
 
             finally:
                 await db.commit()
-                # Pulizia: rimuove il file temporaneo dopo l'elaborazione
                 if file_path.exists():
                     file_path.unlink()
 

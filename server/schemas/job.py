@@ -12,7 +12,7 @@ class JobStatusResponse(BaseModel):
 
     id: str
     filename: str
-    status: str           # queued | processing | done | failed
+    status: str          
     rows_imported: int | None
     error: str | None
     created_at: datetime

@@ -15,9 +15,7 @@ class Settings(BaseSettings):
     FIRST_ADMIN_PASSWORD: str
     RABBITMQ_URL: str = "amqp://guest:guest@localhost/"
 
-    # Indica a pydantic-settings dove trovare il file .env
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
-# Singleton: unica istanza condivisa da tutti i moduli tramite `from config import settings`
 settings = Settings()

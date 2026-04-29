@@ -9,8 +9,6 @@ from database import get_db
 from models.user import User
 
 
-# Schema di sicurezza Bearer: FastAPI estrae automaticamente il token
-# dall'header "Authorization: Bearer <token>" di ogni richiesta.
 bearer_scheme = HTTPBearer()
 
 

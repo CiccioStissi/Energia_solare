@@ -23,7 +23,6 @@ class CsvImporter:
         """
         df = pd.read_csv(io.BytesIO(content))
 
-        # Normalizza nomi colonne
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
         if "timestamp" not in df.columns:
@@ -34,14 +33,12 @@ class CsvImporter:
         df["timestamp"] = pd.to_datetime(df["timestamp"])
         df["energy_kwh"] = pd.to_numeric(df["energy_kwh"], errors="coerce")
 
-        # Colonne opzionali: se non presenti nel CSV vengono impostate a None
         for col in ("radiation_wm2", "temperature_c"):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
             else:
                 df[col] = None
 
-        # Rimuove righe con valori obbligatori nulli
         df = df.dropna(subset=["timestamp", "energy_kwh"])
 
         if df.empty:
@@ -49,7 +46,6 @@ class CsvImporter:
 
         records = df[["timestamp", "energy_kwh", "radiation_wm2", "temperature_c"]].to_dict(orient="records")
 
-        # Se un record con lo stesso timestamp esiste già, viene ignorato silenziosamente
         stmt = pg_insert(SolarProduction).values(records).on_conflict_do_nothing(index_elements=["timestamp"])
         await db.execute(stmt)
         await db.commit()

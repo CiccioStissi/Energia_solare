@@ -11,7 +11,6 @@ from auth.jwt import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Contesto bcrypt per hashing e verifica password
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -24,16 +23,6 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     con bcrypt. In caso di credenziali errate risponde sempre con
     lo stesso messaggio generico (401) per non rivelare se è lo
     username o la password ad essere sbagliata.
-
-    Args:
-      request: corpo JSON con username e password (schema LoginRequest).
-      db: sessione database iniettata da FastAPI.
-
-    Returns:
-      TokenResponse con il JWT da usare nelle richieste successive.
-
-    Raises:
-      HTTPException 401: se username non esiste o password errata.
     """
     result = await db.execute(select(User).where(User.username == request.username))
     user = result.scalar_one_or_none()
@@ -44,7 +33,6 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
             detail="Username o password non corretti",
         )
 
-    # Payload JWT: username (sub) e ruolo per il controllo permessi
     token = create_access_token({"sub": user.username, "role": user.role})
     return TokenResponse(access_token=token)
 
@@ -58,18 +46,7 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
     La password viene hashata con bcrypt prima del salvataggio — mai in chiaro.
     Il ruolo assegnato è sempre 'user': la creazione di admin avviene
     solo tramite il lifespan in main.py.
-
-    Args:
-      request: corpo JSON con username e password desiderati (schema RegisterRequest).
-      db: sessione database iniettata da FastAPI.
-
-    Returns:
-      Messaggio di conferma con lo username creato (HTTP 201 Created).
-
-    Raises:
-      HTTPException 409: se lo username è già presente nel database.
     """
-    # "admin" è un utente riservato creato automaticamente all'avvio — non registrabile
     if request.username.lower() == "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
