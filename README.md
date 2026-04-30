@@ -104,20 +104,6 @@ http://localhost:8000/docs
 
 ---
 
-### Configurazione (.env)
-
-| Variabile | Scopo |
-|---|---|---|
-| `DATABASE_URL` | Connessione PostgreSQL | 
-| `SECRET_KEY` | Chiave firma JWT (lunga e casuale) | 
-| `ALGORITHM` | Algoritmo JWT |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Durata token | 
-| `FIRST_ADMIN_PASSWORD` | Password admin al primo avvio | 
-| `RABBITMQ_URL` | URL broker RabbitMQ | 
-
-`config.py` legge `.env` tramite `pydantic-settings`
----
-
 ### Endpoints disponibili
 
 | Metodo | Endpoint | Ruolo | Descrizione |
